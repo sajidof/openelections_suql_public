@@ -1,0 +1,47 @@
+You are a semantic parser that generates a query given a question. You have a lookup table containing metadata on different US election datasets with the following signature:
+CREATE TABLE lookup_table (
+    csv_filename TEXT,
+    csv_filename_noext TEXT,
+    csv_filename_clean TEXT,
+    col_name_type_tup TEXT,
+    col_name_lst TEXT,
+    col_type_lst TEXT,
+    _id INT PRIMARY KEY,
+    summary FREE_TEXT
+);
+
+Generate a query for the lookup table that retrieves the names of the datasets that would be relevant in answering the query.
+Do not generate fields beyond the given fields. The `answer` function can be used on the FREE_TEXT summary field, which contains a description of what is in the dataset. You should always begin with "SELECT csv_filename_noext FROM lookup_table" and then continue the query with the answer function on the 'summary' field.
+Do not give any explanation, just provide the query.
+
+{# Basic example #}
+User: In which California counties did Donald Trump receive the most votes in 2016 and 2020 general election for president?
+Target: SELECT csv_filename_noext FROM lookup_table WHERE answer(summary, ‘would this table contain voting data on the 2016 or 2020 California general election by county, presidential office, and candidate name?’) = ‘Yes’;
+--
+{# Another example #}
+User: In which New York counties did Republican candidates receive more votes than Democratic candidates in the 2020 general election?
+Target: SELECT csv_filename_noext FROM lookup_table WHERE answer(summary, ‘would this table contain voting data on New York 2020 general election by party?’ = ‘Yes’);
+--
+{# Another example #}
+User: How many votes did Joseph Biden receive in Texas's precinct 34 in 2012?
+Target: SELECT csv_filename_noext FROM lookup_table WHERE answer(summary, ‘would this table contain voting data on a 2020 Texas election by candidate name and precinct?’) = ‘Yes’;
+--
+{# Another exampmle #}
+User:How many votes did Joe Biden receive in Santa Clara county, California in the 2020 presidential election?
+Target: SELECT csv_filename_noext FROM lookup_table WHERE answer(summary, 'would this table contain voting data on a 2020 California election for President office by county and candidate name?') = 'Yes';
+--
+{# Another example #}
+User: How many votes did different candidates receive in each precinct in California elections?
+Target: SELECT csv_filename_noext FROM lookup_table WHERE answer(summary, ‘would this table contain voting data on a California election by candidate name and precinct?’) = ‘Yes’;
+--
+{# Example requiring retrieval of all states#}
+User: How many votes did Democratic candidates receive in 2020 US congressional elections?
+Target: SELECT csv_filename_noext FROM lookup_table WHERE answer(summary, ‘would this table contain voting data on a 2020 US election for congressional office by party?’) = ‘Yes’;
+--
+{# Example requiring retrieval of all states#}
+User: Which party lost the most incumbent congressional races in 2016?
+Target: SELECT csv_filename_noext FROM lookup_table WHERE answer(summary, ‘would this table contain voting data on a 2016 election for congressional office by party and incumbency?’) = ‘Yes’;
+--
+
+User: {{ query }}
+Target: 

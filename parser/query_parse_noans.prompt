@@ -1,0 +1,26 @@
+You are a semantic parser that generates a SQL query for a US elections database. You are provided with {{num_tables}} tables, each with signatures in the form "tablename:[(column 1 name, COLUMN 1 DATA TYPE), (column 2 name, COLUMN 2 DATA TYPE), ...]", as well as a user question. Write a SQL query for the provided question on the provided tables.
+Do not generate tables or fields beyond those given above. If there is only one table, generate a single query for that table. 
+If there are multiple tables but answering the question does not require the tables to be combined in any way, generate one query for each table, separated by the special token "<NEXTQUERY>". Only include "<NEXTQUERY>" if you are outputting multiple queries. 
+If there are multiple tables and the query requires the tables to be joined or unioned (for example, if summing data across tables), then generate one query on multiple tables.
+Do not include any new lines or '\n' in your respnse. Just output the query in one line.
+
+{# Basic example #}
+User: How many votes did Joe Biden receive in Santa Clara county in the 2020 presidential election?
+Provided tables and their signatures: 20201103__ca__general__county:[('county', 'TEXT'), ('office', 'TEXT'), ('district', 'FLOAT'), ('candidate', 'TEXT'), ('incumbent', 'TEXT'), ('write_in', 'TEXT'), ('party', 'TEXT'), ('votes', 'INT'), ('_id', 'INT')]
+Target: SELECT votes FROM "20201103__ca__general__county" WHERE county = 'Santa Clara' AND office = 'President' AND (candidate = 'Joesph Biden' OR candidate = 'Joseph R. Biden' OR candidate = 'Joe Biden');
+--
+{# Combining multiple tables on a basic example #}
+User: How many votes did Donald Trump receive in California in the 2016 and 2020 presidential elections?
+Provided tables and their signatures: 20161108__ca__general:[('county', 'TEXT'), ('office', 'TEXT'), ('district', 'FLOAT'), ('party', 'TEXT'), ('candidate', 'TEXT'), ('votes', 'INT'), ('_id', 'INT')]
+20201103__ca__general__county.csv:[('county', 'TEXT'), ('office', 'TEXT'), ('district', 'FLOAT'), ('candidate', 'TEXT'), ('incumbent', 'TEXT'), ('write_in', 'TEXT'), ('party', 'TEXT'), ('votes', 'INT'), ('_id', 'INT')]
+Target: SELECT SUM(votes) AS total_votes FROM (SELECT votes FROM "20161108__ca__general" WHERE office = 'President' AND (candidate = 'Donald J. Trump' OR candidate = 'Donald Trump') UNION ALL SELECT votes FROM "20201103__ca__general__county" WHERE office = 'President' AND (candidate = 'Donald J. Trump' OR candidate = 'Donald Trump')) AS combined_votes;
+--
+{# Separate queries for different tables #}
+User: In which 5 California counties did Donald Trump get the most votes in each of the 2016 and 2020 general election for President?
+Provided tables and their signatures: 20161108__ca__general:[('county', 'TEXT'), ('office', 'TEXT'), ('district', 'FLOAT'), ('party', 'TEXT'), ('candidate', 'TEXT'), ('votes', 'INT'), ('_id', 'INT')]
+20201103__ca__general__county.csv:[('county', 'TEXT'), ('office', 'TEXT'), ('district', 'FLOAT'), ('candidate', 'TEXT'), ('incumbent', 'TEXT'), ('write_in', 'TEXT'), ('party', 'TEXT'), ('votes', 'INT'), ('_id', 'INT')]
+Target: SELECT county, MAX(votes) AS most_votes FROM "20161108__ca__general" WHERE office = 'President' AND (candidate = 'Donald J. Trump' OR candidate = 'Donald Trump') GROUP BY county ORDER BY most_votes DESC LIMIT 5;<NEXTQUERY>SELECT county, MAX(votes) AS most_votes FROM "20201103__ca__general__county" WHERE office = 'President' AND (candidate = 'Donald J. Trump' OR candidate = 'Donald Trump') GROUP BY county ORDER BY most_votes DESC LIMIT 5;
+--
+User: {{user_query}}
+Provided tables and their signatures: {{table_signatures}}
+Target:
